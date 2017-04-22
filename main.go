@@ -2,12 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/deciphernow/dash/config"
+	"github.com/alecholmez/GoDash/config"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -75,6 +76,12 @@ func main() {
 
 // Dash is the handler that exposes the polling function
 func Dash(w http.ResponseWriter, r *http.Request) {
+	if token == "" {
+		err := errors.New("Missing CIRCLE_CI_AUTH_TOKEN")
+		w.Write([]byte(err.Error()))
+		return
+	}
+
 	projects := getProjects(fmt.Sprintf("%s/projects?circle-token=%s", apiURL, token))
 	var builds []Info
 
