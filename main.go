@@ -87,31 +87,8 @@ func Dash(w http.ResponseWriter, r *http.Request) {
 
 	for _, project := range projects {
 		url := fmt.Sprintf("%s/project/%s/%s/%s?circle-token=%s", apiURL, project.VCSType, project.User, project.Name, token)
+		inf := getBuildInfo(project, url)
 
-		// Hit the circleci endpoint for associated projects
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			panic(err)
-		}
-		req.Header.Add("Accept", "application/json")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			panic(err)
-		}
-		defer resp.Body.Close()
-
-		var repo Repo
-		err = json.NewDecoder(resp.Body).Decode(&repo.Builds)
-		if err != nil {
-			panic(err)
-		}
-		// Get the latest build
-		inf := Info{
-			Language: project.Language,
-			Name:     project.Name,
-			Build:    repo.Builds[0],
-		}
 		builds = append(builds, inf)
 	}
 
@@ -121,6 +98,35 @@ func Dash(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(b)
+}
+
+func getBuildInfo(p Project, url string) Info {
+	// Hit the circleci endpoint for associated projects
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Add("Accept", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	var repo Repo
+	err = json.NewDecoder(resp.Body).Decode(&repo.Builds)
+	if err != nil {
+		panic(err)
+	}
+	// Get the latest build
+	inf := Info{
+		Language: p.Language,
+		Name:     p.Name,
+		Build:    repo.Builds[0],
+	}
+
+	return inf
 }
 
 func getProjects(url string) []Project {
