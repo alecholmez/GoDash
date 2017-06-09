@@ -10,6 +10,7 @@ A circle ci dashboard written in Go/React that displays your followed builds wit
 
 2. Build binary:
     ```bash
+    dep ensure -v
     go build
     ```
 

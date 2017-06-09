@@ -32,6 +32,7 @@ type Build struct {
 	Status     string `json:"status"`
 	User       User   `json:"user"`
 	Lifecyrcle string `json:"lifecycle"`
+	Branch     string `json:"branch"`
 	BuildNum   int    `json:"build_num"`
 	StartTime  string `json:"start_time"`
 	StopTime   string `json:"stop_time"`
@@ -83,20 +84,23 @@ func Dash(w http.ResponseWriter, r *http.Request) {
 	}
 
 	projects := getProjects(fmt.Sprintf("%s/projects?circle-token=%s", apiURL, token))
-	var builds []Info
+	var resp struct {
+		Builds []Info `json:"builds"`
+	}
 
 	for _, project := range projects {
 		url := fmt.Sprintf("%s/project/%s/%s/%s?circle-token=%s", apiURL, project.VCSType, project.User, project.Name, token)
 		inf := getBuildInfo(project, url)
 
-		builds = append(builds, inf)
+		resp.Builds = append(resp.Builds, inf)
 	}
 
-	b, err := json.MarshalIndent(builds, "", "    ")
+	b, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
 		panic(err)
 	}
 
+	w.Header().Add("content-type", "application/json")
 	w.Write(b)
 }
 
