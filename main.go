@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -59,8 +60,10 @@ const (
 )
 
 var (
+	conf     = flag.String("config", "../etc/settings.toml", "Path to config file")
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
+			fmt.Println(r.Header.Get("Origin"))
 			return true
 		},
 	}
@@ -71,13 +74,13 @@ var token = os.Getenv("CIRCLE_CI_AUTH_TOKEN")
 var client = &http.Client{}
 
 func main() {
-	c := config.Parse("./settings.toml")
+	c := config.Parse(*conf)
 
 	mux := mux.NewRouter()
 	mux.HandleFunc("/dash", Dash)
 	s := http.Server{
 		Addr:         c.Address,
-		Handler:      handlers.LoggingHandler(os.Stdout, mux),
+		Handler:      handlers.LoggingHandler(os.Stdout, handlers.CORS()(mux)),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
