@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/alecholmez/GoDash/config"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 )
 
 // Project represents a CircleCI project associated with a user
@@ -56,6 +58,14 @@ const (
 	apiURL = "https://circleci.com/api/v1.1"
 )
 
+var (
+	upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
+)
+
 // Get API Token
 var token = os.Getenv("CIRCLE_CI_AUTH_TOKEN")
 var client = &http.Client{}
@@ -72,36 +82,49 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	s.ListenAndServe()
+	fmt.Println("Listening. . .")
+	if err := s.ListenAndServe(); err != nil {
+		panic(err)
+	}
 }
 
 // Dash is the handler that exposes the polling function
 func Dash(w http.ResponseWriter, r *http.Request) {
+	// Upgrade web handler to a websocket connection
+	c, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("upgrade: ", err)
+		return
+	}
+	defer c.Close()
+
+	// Business logic
 	if token == "" {
-		err := errors.New("Missing CIRCLE_CI_AUTH_TOKEN")
+		err = errors.New("Missing CIRCLE_CI_AUTH_TOKEN")
 		w.Write([]byte(err.Error()))
 		return
 	}
 
-	projects := getProjects(fmt.Sprintf("%s/projects?circle-token=%s", apiURL, token))
-	var resp struct {
-		Builds []Info `json:"builds"`
+	for {
+		log.Println("Sending current builds. . .")
+		projects := getProjects(fmt.Sprintf("%s/projects?circle-token=%s", apiURL, token))
+		var resp struct {
+			Builds []Info `json:"builds"`
+		}
+
+		for _, project := range projects {
+			url := fmt.Sprintf("%s/project/%s/%s/%s?circle-token=%s", apiURL, project.VCSType, project.User, project.Name, token)
+			inf := getBuildInfo(project, url)
+
+			resp.Builds = append(resp.Builds, inf)
+		}
+
+		err = c.WriteJSON(resp)
+		if err != nil {
+			log.Println("Write: ", err)
+		}
+		time.Sleep(time.Second * 10)
 	}
-
-	for _, project := range projects {
-		url := fmt.Sprintf("%s/project/%s/%s/%s?circle-token=%s", apiURL, project.VCSType, project.User, project.Name, token)
-		inf := getBuildInfo(project, url)
-
-		resp.Builds = append(resp.Builds, inf)
-	}
-
-	b, err := json.MarshalIndent(resp, "", "    ")
-	if err != nil {
-		panic(err)
-	}
-
-	w.Header().Add("content-type", "application/json")
-	w.Write(b)
 }
 
 func getBuildInfo(p Project, url string) Info {
