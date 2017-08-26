@@ -11,15 +11,15 @@ A circle ci dashboard written in Go/React that displays your followed builds wit
 2. Build binary:
     ```bash
     dep ensure -v
-    go build
+    ./build.sh
     ```
 
 3. Run:
     ```bash
-    ./GoDash
+    docker-compose up --build
     ```
     If you do not set the environment variable, the program will fail
 
-4. Navigate to `localhost:8080/dash`
+4. Navigate to `ws://localhost:8080/dash`
 
     This will list all your followed projects and current build info
