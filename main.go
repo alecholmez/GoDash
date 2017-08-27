@@ -74,6 +74,7 @@ var token = os.Getenv("CIRCLE_CI_AUTH_TOKEN")
 var client = &http.Client{}
 
 func main() {
+	flag.Parse()
 	c := config.Parse(*conf)
 
 	mux := mux.NewRouter()
