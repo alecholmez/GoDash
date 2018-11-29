@@ -1,5 +1,5 @@
 # DASH
-A circle ci dashboard written in Go/React that displays your followed builds with metadata.
+A microservice that communicates with circle ci that aggregates your followed builds with metadata.
 
 ## Getting Started
 1. Set an environment variable:
